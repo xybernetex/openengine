@@ -1,0 +1,37 @@
+{
+  "source": "toolserver_local",
+  "tools": [
+    {
+      "name": "send_email",
+      "description": "Send an email via Resend. Use this tool to deliver reports, summaries, or notifications to one or more recipients. Required params: to (string), subject (string), html (string, HTML email body).",
+      "actions": ["send"],
+      "input_schema": {
+        "type": "object",
+        "required": ["to", "subject", "html"],
+        "properties": {
+          "to":      {"type": "string",  "description": "Recipient email address"},
+          "subject": {"type": "string",  "description": "Email subject line"},
+          "html":    {"type": "string",  "description": "Email body as HTML"}
+        }
+      },
+      "risk": "low",
+      "read_only": false,
+      "backend": "webhook"
+    },
+    {
+      "name": "web_search",
+      "description": "Search the web via Tavily and return structured results. Use this tool to research current facts, news, prices, or any information not in training data. Required params: query (string).",
+      "actions": ["search"],
+      "input_schema": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {"type": "string", "description": "Search query"}
+        }
+      },
+      "risk": "low",
+      "read_only": true,
+      "backend": "webhook"
+    }
+  ]
+}

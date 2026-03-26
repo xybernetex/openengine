@@ -1,0 +1,111 @@
+{
+  "manifest_version": "1.0",
+  "name": "research_and_email",
+  "description": "Capability manifest for goals that require web research followed by email delivery. Provides web_search (Tavily) and send_email (SMTP / n8n) tools.",
+  "tools": [
+    {
+      "name": "web_search",
+      "description": "Search the web using the Tavily Search API and return a ranked list of relevant results with titles, URLs, and content snippets. Use this to gather up-to-date information before composing the email.",
+      "webhook_action": "web_search",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "description": "The search query string.",
+          "required": true
+        },
+        "max_results": {
+          "type": "integer",
+          "description": "Maximum number of results to return. Defaults to 5.",
+          "required": false,
+          "default": 5
+        },
+        "search_depth": {
+          "type": "string",
+          "description": "Search depth: 'basic' or 'advanced'.",
+          "required": false,
+          "enum": ["basic", "advanced"],
+          "default": "basic"
+        },
+        "include_domains": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Restrict results to these domains.",
+          "required": false
+        },
+        "exclude_domains": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Exclude these domains from results.",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title":   { "type": "string" },
+                "url":     { "type": "string" },
+                "content": { "type": "string" },
+                "score":   { "type": "number" }
+              }
+            }
+          },
+          "query":         { "type": "string" },
+          "response_time": { "type": "number" }
+        }
+      }
+    },
+    {
+      "name": "send_email",
+      "description": "Send an email to one or more recipients. Use this as the final step after research and drafting are complete. Requires the recipient address, subject line, and body content. Supports plain text and HTML bodies.",
+      "webhook_action": "send_email",
+      "parameters": {
+        "to": {
+          "type": "string",
+          "description": "Recipient email address. For multiple recipients use a comma-separated string.",
+          "required": true
+        },
+        "subject": {
+          "type": "string",
+          "description": "Email subject line. Should be concise and descriptive.",
+          "required": true
+        },
+        "body": {
+          "type": "string",
+          "description": "The full email body. Plain text or HTML depending on the 'body_type' parameter.",
+          "required": true
+        },
+        "body_type": {
+          "type": "string",
+          "description": "Content type of the body: 'text' for plain text or 'html' for HTML. Defaults to 'text'.",
+          "required": false,
+          "enum": ["text", "html"],
+          "default": "text"
+        },
+        "cc": {
+          "type": "string",
+          "description": "Optional CC recipients as a comma-separated email string.",
+          "required": false
+        },
+        "reply_to": {
+          "type": "string",
+          "description": "Optional reply-to email address.",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Send result from the mail service.",
+        "properties": {
+          "success":    { "type": "boolean", "description": "Whether the email was accepted for delivery." },
+          "message_id": { "type": "string",  "description": "SMTP message ID assigned by the mail server." },
+          "error":      { "type": "string",  "description": "Error message if success is false." }
+        }
+      }
+    }
+  ]
+}

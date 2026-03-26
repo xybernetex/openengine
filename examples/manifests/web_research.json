@@ -1,0 +1,65 @@
+{
+  "manifest_version": "1.0",
+  "name": "web_research",
+  "description": "Capability manifest for web research goals. Provides the web_search tool powered by the Tavily API via the ToolServer webhook.",
+  "tools": [
+    {
+      "name": "web_search",
+      "description": "Search the web using the Tavily Search API and return a ranked list of relevant results with titles, URLs, and content snippets. Use this to gather up-to-date information on any topic.",
+      "webhook_action": "web_search",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "description": "The search query string. Be specific and include relevant keywords for best results.",
+          "required": true
+        },
+        "max_results": {
+          "type": "integer",
+          "description": "Maximum number of results to return. Defaults to 5. Maximum allowed is 20.",
+          "required": false,
+          "default": 5
+        },
+        "search_depth": {
+          "type": "string",
+          "description": "Search depth. Use 'basic' for fast broad results or 'advanced' for deeper research. Defaults to 'basic'.",
+          "required": false,
+          "enum": ["basic", "advanced"],
+          "default": "basic"
+        },
+        "include_domains": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional list of domains to restrict results to (e.g. ['arxiv.org', 'github.com']).",
+          "required": false
+        },
+        "exclude_domains": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional list of domains to exclude from results.",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Search response from Tavily.",
+        "properties": {
+          "results": {
+            "type": "array",
+            "description": "List of search result objects.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title":   { "type": "string", "description": "Page title." },
+                "url":     { "type": "string", "description": "Page URL." },
+                "content": { "type": "string", "description": "Relevant content snippet." },
+                "score":   { "type": "number", "description": "Relevance score (0–1)." }
+              }
+            }
+          },
+          "query":          { "type": "string", "description": "The query that was executed." },
+          "response_time":  { "type": "number", "description": "API response time in seconds." }
+        }
+      }
+    }
+  ]
+}
