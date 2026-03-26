@@ -361,7 +361,7 @@ ARTIFACT_TYPES = {
 class WorkingMemory:
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path                    # exposed for WorldEngine agents
-        self.conn    = sqlite3.connect(str(db_path), check_same_thread=False)
+        self.conn    = sqlite3.connect(str(db_path), check_same_thread=False, timeout=30)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
         self.conn.commit()
