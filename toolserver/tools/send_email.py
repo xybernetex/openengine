@@ -68,14 +68,17 @@ async def run(invocation: dict[str, Any]) -> dict[str, Any]:
     Returns status="succeeded" with the Resend message ID,
     or status="failed" with a descriptive error.
     """
-    if not _RESEND_API_KEY:
+    params: dict[str, Any] = invocation.get("input", {}) or {}
+
+    # Per-request key wins over server env var
+    api_key = str(params.pop("resend_api_key", "") or _RESEND_API_KEY).strip()
+
+    if not api_key:
         return {
             "status": "failed",
             "output": {},
-            "error":  "RESEND_API_KEY is not configured on the ToolServer",
+            "error":  "RESEND_API_KEY is not configured — pass resend_api_key in the request or set it in the server .env",
         }
-
-    params: dict[str, Any] = invocation.get("input", {}) or {}
 
     # ── Required fields ───────────────────────────────────────────────────────
     to: list[str] = _to_list(params.get("to"))
@@ -155,7 +158,7 @@ async def run(invocation: dict[str, Any]) -> dict[str, Any]:
             _RESEND_ENDPOINT,
             json=payload,
             headers={
-                "Authorization": f"Bearer {_RESEND_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type":  "application/json",
             },
             timeout=_TIMEOUT,
