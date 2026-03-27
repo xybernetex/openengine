@@ -361,6 +361,12 @@ The core engine in this repo is the same engine that powers the hosted platform.
 
 ---
 
+## Author
+
+Built by **Chris** — founder of [Xybernetex](https://xybernetex.com).
+
+---
+
 ## License
 
 **GNU Affero General Public License v3.0 (AGPL-3.0)**
