@@ -363,7 +363,7 @@ The core engine in this repo is the same engine that powers the hosted platform.
 
 ## Author
 
-Built by **Chris** — founder of [Xybernetex](https://xybernetex.com).
+Built by **Chris Valaer** — founder of [Xybernetex](https://xybernetex.com).
 
 ---
 
