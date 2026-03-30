@@ -202,7 +202,8 @@ ToolServer (FastAPI, port 8001)
 ├── GET  /health        ← liveness check
 └── tools/
     ├── web_search.py   ← Tavily search
-    └── send_email.py   ← Resend email
+    ├── send_email.py   ← Resend email
+    └── google_drive.py ← Google Drive read/write/list/search
 ```
 
 Any webhook-callable endpoint can be a tool: N8N workflows, custom REST APIs, internal services. The agent does not care what is behind the webhook.
@@ -313,7 +314,8 @@ openengine/
 │   ├── registry.py          # Plugin autodiscovery
 │   └── tools/
 │       ├── web_search.py    # Tavily web search
-│       └── send_email.py    # Resend email
+│       ├── send_email.py    # Resend email
+│       └── google_drive.py  # Google Drive read/write/list/search
 ├── training/                # Policy training pipeline
 │   ├── rollout_generator.py # Synthetic BC demonstration generator
 │   ├── ppo_trainer.py       # PPO + BC training loop

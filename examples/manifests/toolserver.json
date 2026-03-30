@@ -32,6 +32,26 @@
       "risk": "low",
       "read_only": true,
       "backend": "webhook"
+    },
+    {
+      "name": "google_drive",
+      "description": "Read, write, list, and search files in Google Drive. Use read to get file contents, write to create or update a file, list to see files in a folder, search to find files by name or content.",
+      "actions": ["read", "write", "list", "search"],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_id":   {"type": "string", "description": "Google Drive file ID (for read)"},
+          "name":      {"type": "string", "description": "File name (for write)"},
+          "content":   {"type": "string", "description": "Text content to write (for write)"},
+          "folder_id": {"type": "string", "description": "Folder ID to list or write into (optional)"},
+          "mime_type": {"type": "string", "description": "MIME type for write, default text/plain"},
+          "query":     {"type": "string", "description": "Search query (for search)"},
+          "page_size": {"type": "integer", "description": "Max results to return (for list/search)"}
+        }
+      },
+      "risk": "medium",
+      "read_only": false,
+      "backend": "webhook"
     }
   ]
 }

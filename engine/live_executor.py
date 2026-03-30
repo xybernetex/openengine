@@ -490,6 +490,19 @@ class LiveExecutor:
         # Hard cap — prompt says 5, code enforces 5
         aspects = aspects[:5]
 
+        # Hard strip — remove email/drive delivery aspects if goal doesn't warrant them
+        _goal_lower = goal.lower()
+        _has_email = "@" in goal or "email" in _goal_lower or "send to" in _goal_lower
+        _has_drive = any(k in _goal_lower for k in ("google drive", "drive", "gdrive", "folder"))
+        _email_aspects = {"email_transmission_confirmation", "sms_delivery_confirmation",
+                          "push_notification_confirmation", "email_delivery_confirmation"}
+        _drive_aspects = {"google_drive_file_upload", "drive_file_upload", "gdrive_upload",
+                          "save_to_drive", "upload_to_drive", "drive_upload"}
+        if not _has_email:
+            aspects = [a for a in aspects if a not in _email_aspects and "email" not in a]
+        if not _has_drive:
+            aspects = [a for a in aspects if a not in _drive_aspects]
+
         if not aspects:
             # Regex fallback — pull anything that looks like a snake_case identifier
             aspects = [
@@ -758,6 +771,41 @@ class LiveExecutor:
                 if self._resend_api_key:
                     tool_params["resend_api_key"] = self._resend_api_key
                 print("[LiveExecutor] INVOKE_TOOL email body composed from artifacts.", flush=True)
+
+        # ── Google Drive content composition + deferred guard ────────────────
+        # When the router picks google_drive.write, compose full report content
+        # from all artifacts — the router LLM only sees schemas, not artifact text.
+        if tool_name == "google_drive" and tool_action == "write":
+            # Guard: don't write to Drive until research artifacts exist
+            _all_arts = self.wm.get_artifacts(run_id)
+            _doc_arts = [a for a in _all_arts if a.get("artifact_type") == "DOCUMENT"
+                         and len((a.get("content") or "")) > 200
+                         and "plan" not in (a.get("title") or "").lower()
+                         and "decomposition" not in (a.get("title") or "").lower()]
+            if not _doc_arts:
+                print("[LiveExecutor] INVOKE_TOOL Drive write deferred — no research artifacts yet.", flush=True)
+                return {
+                    "success": False, "exec_success": False,
+                    "artifact_type": None, "artifact_title": None,
+                    "tool_used": "google_drive", "tool_status": "deferred",
+                    "aspects_advanced": [], "new_artifacts": [],
+                    "error": "Drive write deferred: research not yet complete.",
+                }
+            existing_content = str(tool_params.get("content", "") or "").strip()
+            if len(existing_content) < 200:
+                artifacts_all = self.wm.get_artifacts(run_id)
+                prose_artifacts = [
+                    a for a in artifacts_all
+                    if a.get("artifact_type") in ("DOCUMENT", "NARRATIVE")
+                    and len((a.get("content") or "")) > 100
+                ]
+                if prose_artifacts:
+                    combined = "\n\n---\n\n".join(
+                        f"# {a.get('title', 'Section')}\n\n{a.get('content', '')}"
+                        for a in prose_artifacts
+                    )
+                    tool_params["content"] = combined
+                    print(f"[LiveExecutor] INVOKE_TOOL Drive write content composed from {len(prose_artifacts)} artifacts.", flush=True)
 
         # ── Step 2: Execute the tool ───────────────────────────────────────────
         raw_output: str = ""

@@ -288,8 +288,54 @@ def _build_result_payload(
     return summary_text, "\n".join(report_lines), artifact_payload
 
 
+_DRIVE_KEYWORDS: frozenset[str] = frozenset({
+    "drive", "google drive", "gdrive", "save", "upload", "store",
+    "folder", "spreadsheet", "docs", "sheets",
+})
+
+
+def _is_drive_goal(goal: str) -> bool:
+    """Return True if the goal requires writing to Google Drive."""
+    g = goal.lower()
+    return any(kw in g for kw in _DRIVE_KEYWORDS)
+
+
+def _drive_done(wm, run_id: str) -> bool:
+    """Return True if a google_drive tool invocation has already succeeded."""
+    if wm is None or not run_id:
+        return False
+    try:
+        artifacts = wm.get_artifacts(run_id)
+        return any(
+            "google_drive" in (a.get("title") or "").lower()
+            for a in artifacts
+            if a.get("artifact_type") == "NARRATIVE"
+        )
+    except Exception:
+        return False
+
+
+def _research_ready(wm, run_id: str) -> bool:
+    """Return True if substantive research DOCUMENT artifacts exist (same
+    condition used by live_executor's deferred Drive write guard)."""
+    if wm is None or not run_id:
+        return False
+    try:
+        artifacts = wm.get_artifacts(run_id)
+        return any(
+            a.get("artifact_type") == "DOCUMENT"
+            and len((a.get("content") or "")) > 200
+            and "plan" not in (a.get("title") or "").lower()
+            and "decomposition" not in (a.get("title") or "").lower()
+            for a in artifacts
+        )
+    except Exception:
+        return False
+
+
 def _resolve_action(
-    state, policy: ActorCritic, device: torch.device
+    state, policy: ActorCritic, device: torch.device,
+    goal: str = "", wm=None, run_id: str = "",
 ) -> tuple[int, str, list[float]]:
     state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
 
@@ -307,6 +353,9 @@ def _resolve_action(
     delivery_pending    = sv[_S_DELIVERY_PENDING]   > 0.5
     is_search_goal      = sv[_S_SEARCH_GOAL]        > 0.5
     search_done         = sv[_S_SEARCH_DONE]        > 0.5
+    is_drive            = _is_drive_goal(goal)
+    drive_written       = _drive_done(wm, run_id)
+    research_ready      = _research_ready(wm, run_id)
 
     mask = torch.ones(ACTION_DIM, dtype=torch.bool)
 
@@ -322,6 +371,14 @@ def _resolve_action(
         # s[19]=1.0 and no NARRATIVE yet: goal requires web search and it hasn't
         # happened yet.  Force INVOKE_TOOL so the policy can't skip straight to
         # WRITE_ARTIFACT and hallucinate research data.
+        mask[:] = False
+        mask[ACTION_MAP_REV["INVOKE_TOOL"]] = True
+    elif is_drive and search_done and not drive_written and research_ready:
+        # Goal requires a Google Drive write, research artifacts exist, but
+        # Drive hasn't been written yet. Force INVOKE_TOOL so the policy can't
+        # complete Drive aspects via WRITE_ARTIFACT without calling the tool.
+        # Gated on research_ready — mirrors the deferred guard in live_executor
+        # so we don't force INVOKE_TOOL while documents are still being written.
         mask[:] = False
         mask[ACTION_MAP_REV["INVOKE_TOOL"]] = True
     else:
@@ -459,7 +516,8 @@ def run_inference_job(
             aspects_before = env.wm.get_goal_aspects(actual_run_id)
 
             action_idx, action_name, raw_logits = _resolve_action(
-                state, policy, torch.device("cpu")
+                state, policy, torch.device("cpu"),
+                goal=goal, wm=env.wm, run_id=actual_run_id,
             )
 
             T.step_announce(step, MAX_STEPS, action_name, prev_reward=prev_reward)
